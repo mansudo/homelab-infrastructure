@@ -45,7 +45,7 @@ This repo documents the topology, configuration references, and validation notes
 | 20 | HomeLab | Synology NAS, honeypot, lab/testing segment |
 | 30 | Wireless | General Wi-Fi clients |
 | 40 | IoT | Isolated network for untrusted/IoT devices |
-| 50 | Sec+ | Security devices (⚠️ config mismatch — labeled 50, actually tagged VLAN 47) |
+| 50 | Sec+ | Security devices |
 | 60 | Kids Only | Kids' devices, isolated segment |
 
 ### Firewall / Segmentation Notes
@@ -55,9 +55,8 @@ This repo documents the topology, configuration references, and validation notes
 - UDM Pro Port 5 → USW Flex Mini / R820, native VLAN HomeWired
 
 ### Known Gaps / In-Progress Items
-- Dell PowerEdge R820 iDRAC (10.10.10.13) currently blocked by NIC IP filter — requires physical console access (F2 → iDRAC Settings → disable IP filter) to resolve
-- Unidentified device ("Dell 7k") present on UDM Pro Port 2 — pending identification
-- VLAN 50 (Sec+) has a labeling/tagging mismatch between the UniFi UI (50) and the actual VLAN tag in use (47) — flagged for cleanup
+- Dell PowerEdge R820 iDRAC access currently blocked by a NIC IP filter — requires physical console access to resolve
+- One unidentified device present on the network — pending identification as part of ongoing lab hygiene
 
 This lab is actively maintained and evolving — the gaps above are tracked, not hidden, because real environments have them too.
 
