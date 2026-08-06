@@ -8,63 +8,58 @@ This repo documents the topology, configuration references, and validation notes
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                    pfSense Firewall                  │
-│            (VLAN routing + IDS/IPS)                 │
-└──────────┬──────────────┬──────────────┬────────────┘
-           │              │              │
-      VLAN 10          VLAN 20       VLAN 30
-    Management        Endpoints      DMZ/Lab
-           │              │              │
-    vCenter/ESXi    Win/Mac/Linux    Test Servers
-    Domain Ctrl      (50+ nodes)    (CA, SIEM, etc.)
+│              UniFi Dream Machine Pro (UDM Pro)        │
+│         Router + Firewall + IDS/IPS + VLAN routing    │
+└───┬───────┬───────┬───────┬───────┬───────┬──────────┘
+    │       │       │       │       │       │
+  VLAN 01 VLAN 10 VLAN 20 VLAN 30 VLAN 40 VLAN 50/60
+   Base   HomeWired HomeLab Wireless  IoT   Sec+/Kids
+    │       │       │
+ native  R820/iDRAC Synology NAS
+ trunk   Flex Mini   + Honeypot
+         Raspberry Pi (10.10.20.8)
 ```
 
 ## Core Components
 
 | Component | Platform | Purpose |
 |-----------|----------|---------|
-| Hypervisor | VMware vCenter / ESXi | VM management, snapshots, lab isolation |
-| Firewall | pfSense | VLAN segmentation, firewall rules, IDS |
-| Domain Controller | Windows Server | AD DS, Group Policy, DNS, DHCP |
-| Certificate Authority | Windows Server CA | Internal PKI, cert-based auth |
+| Router / Firewall | UniFi Dream Machine Pro (UDM Pro) | VLAN routing, firewall rules, IDS/IPS |
+| Switching | UniFi USW Flex Mini | Managed switching for HomeWired segment |
+| Server | Dell PowerEdge R820 | Hypervisor host (iDRAC-managed) |
+| Storage | Synology NAS | Network storage, HomeLab segment |
+| Compute | Raspberry Pi | Lightweight services, SSH key-only access |
 | MDM (Windows) | Microsoft Intune | Policy enforcement, compliance baselines |
 | MDM (macOS) | Jamf Pro | macOS device management, configuration profiles |
-| Identity | Okta | SSO, MFA, conditional access |
-| SIEM | Wazuh | Log aggregation, alert correlation |
+| Identity | Okta / Active Directory | SSO, MFA, conditional access |
+| Deception | Honeypot (10.10.20.8) | Active canary, IDS-monitored |
 | Endpoint OS | Windows 10/11, macOS 14/15, Ubuntu | Policy targets |
 
 ## Network Topology
 
-### VLANs
+### VLANs (UniFi UDM Pro — 8-network structure)
 | VLAN | Name | Purpose |
 |------|------|---------|
-| 10 | Management | Hypervisor management, domain controllers |
-| 20 | Endpoints | Windows/macOS/Linux test machines |
-| 30 | DMZ | Exposed services, external-facing tests |
-| 40 | IoT | Isolated network for untrusted devices |
-| 99 | Native | Untagged/trunk |
+| 01 | Base | Native/untagged trunk |
+| 10 | HomeWired (tagged 1010) | Wired infra: R820, USW Flex Mini, Raspberry Pi |
+| 20 | HomeLab | Synology NAS, honeypot, lab/testing segment |
+| 30 | Wireless | General Wi-Fi clients |
+| 40 | IoT | Isolated network for untrusted/IoT devices |
+| 50 | Sec+ | Security devices (⚠️ config mismatch — labeled 50, actually tagged VLAN 47) |
+| 60 | Kids Only | Kids' devices, isolated segment |
 
-### Firewall Rules (key)
-- Management VLAN: strict allow-list, no internet except update sources
-- Endpoints VLAN: internet allowed, blocked from Management
-- Inter-VLAN routing: explicit rules only, deny-all default
-- IDS: Suricata on pfSense, ET Open ruleset
+### Firewall / Segmentation Notes
+- UDM Pro running IDS/IPS mode across all VLANs
+- Honeypot deployed at 10.10.20.8 (HomeLab VLAN) as an active canary — IDS-monitored
+- Raspberry Pi (10.10.10.10) restricted to public-key SSH only, no password auth
+- UDM Pro Port 5 → USW Flex Mini / R820, native VLAN HomeWired
 
-## Domain Infrastructure
+### Known Gaps / In-Progress Items
+- Dell PowerEdge R820 iDRAC (10.10.10.13) currently blocked by NIC IP filter — requires physical console access (F2 → iDRAC Settings → disable IP filter) to resolve
+- Unidentified device ("Dell 7k") present on UDM Pro Port 2 — pending identification
+- VLAN 50 (Sec+) has a labeling/tagging mismatch between the UniFi UI (50) and the actual VLAN tag in use (47) — flagged for cleanup
 
-```
-Domain: lab.local
-├── Domain Controllers (2 — primary + replica)
-├── Group Policy Objects
-│   ├── Baseline Security (CIS L1)
-│   ├── Defender Configuration
-│   ├── BitLocker Enforcement
-│   └── Audit Policy
-├── Certificate Authority
-│   ├── Root CA (offline)
-│   └── Issuing CA (online)
-└── DNS / DHCP
-```
+This lab is actively maintained and evolving — the gaps above are tracked, not hidden, because real environments have them too.
 
 ## MDM Policy Testing
 
@@ -92,15 +87,6 @@ When testing a new configuration:
 
 This mirrors the validation workflow I used at Tanium validating CSPs across enterprise environments.
 
-## CIS Benchmark Coverage
-
-Actively testing against CIS Benchmarks:
-- CIS Microsoft Windows 11 Benchmark v3.0
-- CIS Microsoft Intune for Windows 11 Benchmark v3.0
-- CIS macOS Sonoma Benchmark v1.0
-
-See [`/cis-validation`](/cis-validation) for test scripts and results.
-
 ## Directory Structure
 
 ```
@@ -108,28 +94,13 @@ homelab-infrastructure/
 ├── README.md
 ├── network/
 │   ├── topology.md          # Full network diagram + VLAN table
-│   ├── pfsense-rules.md     # Firewall rule documentation
+│   ├── udm-pro-rules.md     # UDM Pro firewall rule documentation
 │   └── vlan-config.md       # VLAN configuration reference
-├── domain/
-│   ├── gpo-baseline.md      # Group Policy baseline documentation
-│   ├── ca-setup.md          # Certificate Authority setup notes
-│   └── ad-structure.md      # OU structure and delegation
 ├── intune/
 │   ├── README.md
 │   ├── csp-test-notes.md    # CSP validation findings
 │   ├── compliance-policies/ # Exported compliance policy JSON
 │   └── config-profiles/     # Configuration profile exports
-├── jamf/
-│   ├── README.md
-│   ├── config-profiles/     # mobileconfig templates
-│   └── smart-groups.md      # Smart Group logic
-├── cis-validation/
-│   ├── README.md
-│   ├── windows-11/          # CIS L1/L2 validation scripts
-│   └── macos/               # macOS benchmark checks
-└── siem/
-    ├── README.md
-    └── wazuh-rules.md       # Custom detection rules
 ```
 
 ## Why This Exists
