@@ -17,7 +17,7 @@ This repo documents the topology, configuration references, and validation notes
     │       │       │
  native  R820/iDRAC Synology NAS
  trunk   Flex Mini   + Honeypot
-         Raspberry Pi (10.10.20.8)
+         Raspberry Pi
 ```
 
 ## Core Components
@@ -32,7 +32,7 @@ This repo documents the topology, configuration references, and validation notes
 | MDM (Windows) | Microsoft Intune | Policy enforcement, compliance baselines |
 | MDM (macOS) | Jamf Pro | macOS device management, configuration profiles |
 | Identity | Okta / Active Directory | SSO, MFA, conditional access |
-| Deception | Honeypot (10.10.20.8) | Active canary, IDS-monitored |
+| Deception | Honeypot | Active canary, IDS-monitored |
 | Endpoint OS | Windows 10/11, macOS 14/15, Ubuntu | Policy targets |
 
 ## Network Topology
@@ -50,13 +50,11 @@ This repo documents the topology, configuration references, and validation notes
 
 ### Firewall / Segmentation Notes
 - UDM Pro running IDS/IPS mode across all VLANs
-- Honeypot deployed at 10.10.20.8 (HomeLab VLAN) as an active canary — IDS-monitored
-- Raspberry Pi (10.10.10.10) restricted to public-key SSH only, no password auth
-- UDM Pro Port 5 → USW Flex Mini / R820, native VLAN HomeWired
+- Honeypot deployed on the HomeLab VLAN as an active canary — IDS-monitored
+- Raspberry Pi restricted to public-key SSH only, no password auth
 
 ### Known Gaps / In-Progress Items
 - Dell PowerEdge R820 iDRAC access currently blocked by a NIC IP filter — requires physical console access to resolve
-- One unidentified device present on the network — pending identification as part of ongoing lab hygiene
 
 This lab is actively maintained and evolving — the gaps above are tracked, not hidden, because real environments have them too.
 
